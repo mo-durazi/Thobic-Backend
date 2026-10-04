@@ -6,3 +6,9 @@ class UserRole(enum.Enum):
     ADMIN = "admin"
     PROVIDER = "provider"
     TAILOR = "tailor"
+
+
+class ProfileStatus(enum.Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    BUSY = "busy"
