@@ -18,7 +18,7 @@ class UserModel(BaseModel):
     email = Column(String, unique=True)  # Each email must be unique
     password = Column(String, nullable=True)
     role = Column(
-        SQLEnum(UserRole, name = "user_role", value_callable = lambda e: [m.value for m in e]),
+        SQLEnum(UserRole, name = "user_role", values_callable = lambda e: [m.value for m in e]),
         nullable=False,
         default=UserRole.CLIENT,
         server_default=UserRole.CLIENT.value

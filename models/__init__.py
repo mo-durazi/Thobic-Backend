@@ -1,10 +1,16 @@
 from .base import BaseModel
 
-from . import user
-from . import profile
-from . import material
-from . import client_measurements
-from . import thoub_order
-from . import material_order
+# Import submodules so their classes register with the mapper registry.
+# Import modules, not classes, to avoid circular imports between request/property/notification.
+from . import (
+    user,
+    profile,
+    material,
+    material_order,
+    client_measurements,
+    thoub_order,
+    enums,
+)
+# add future models here as needed
 
 __all__ = ["BaseModel"]

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Integer, Boolean, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, String, Float, Integer, Boolean, ForeignKey, Enum as SQLEnum, Numeric, CheckConstraint
 from sqlalchemy.orm import relationship
 
 from .base import BaseModel
@@ -12,11 +12,12 @@ from models.enums import (
 
 class MaterialModel(BaseModel):
     __tablename__ = "materials"
+    __table_args__ = (CheckConstraint("price >= 0.01", name="check_price_positive"),)
 
-    source_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    source_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     name = Column(String, nullable=False)
-    price = Column(Float, nullable=False)
+    price = Column(Numeric(10, 2), nullable=False)
     description = Column(String, nullable=True)
     colour = Column(String, nullable=False)
 
@@ -24,7 +25,7 @@ class MaterialModel(BaseModel):
         SQLEnum(
             MaterialTexture,
             name="material_texture",
-            value_callable=lambda e: [m.value for m in e]
+            values_callable=lambda e: [m.value for m in e]
         ),
         nullable=False
     )
@@ -33,7 +34,7 @@ class MaterialModel(BaseModel):
         SQLEnum(
             MaterialPattern,
             name="material_pattern",
-            value_callable=lambda e: [m.value for m in e]
+            values_callable=lambda e: [m.value for m in e]
         ),
         nullable=False
     )
@@ -42,7 +43,7 @@ class MaterialModel(BaseModel):
         SQLEnum(
             MaterialSeason,
             name="material_season",
-            value_callable=lambda e: [m.value for m in e]
+            values_callable=lambda e: [m.value for m in e]
         ),
         nullable=False
     )
@@ -51,7 +52,7 @@ class MaterialModel(BaseModel):
         SQLEnum(
             MaterialStand,
             name="material_stand",
-            value_callable=lambda e: [m.value for m in e]
+            values_callable=lambda e: [m.value for m in e]
         ),
         nullable=False
     )
