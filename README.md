@@ -1,185 +1,267 @@
-# Python FastAPI Authorization Solution
+# Thobic Backend
 
-In this app we have setup the JWT authentication for a simple boilerplate application. We have 2 simple models + a user model and respective controllers with serializers to use as a jump off point. We have also included alembic for database migration, with the initial migration already setup to migrate the user model.
+![Thobic Banner](./Image/ThobicBanner.png)
 
-Once this base project is setup, please review and follow the post install documentation:
-> [Managing Migrations](https://github.com/Dujota/FastAPI-SQLAlchemy-Migrations-Guide)
->
-> [Setting up CORS for FastAPI](https://github.com/Dujota/FastAPI-CORS-Guide)
->
-> [Deploying to Render](TBD)
+## Overview
 
-## Getting Started
+Thobic is a web-based platform designed to automate and simplify the process of ordering and tailoring Thawb (traditional Arabic men's clothing).
 
-## Cloning the Auth boilerplate
+The platform connects clients, tailoring shops, and external material providers in one centralized system. It reduces the need for clients to physically visit tailoring shops for measurements, material selection, price negotiation, and delivery arrangements.
 
-Clone this repo down to your machine so you can start the setup stage for your new project:
+It also simplifies the process of requesting and supplying materials from external providers when the required material is not available in the tailor's stock.
 
-```bash
-git clone https://github.com/Bahrain-SEB-15/FastAPI-JWT-Template.git
+---
+
+## Core Idea
+
+The website automates the process of ordering and tailoring Thawb (Arabic men's clothing) by connecting the client with both the tailoring shop and external material providers in one platform.
+
+The website aims to:
+
+- Simplify the process of creating and managing Thawb orders.
+- Allow clients to select materials from the tailor's available stock.
+- Allow clients to request materials from external providers when needed.
+- Store and reuse client measurements for future orders.
+- Reduce the need for physical visits to tailoring shops.
+- Simplify communication between clients and tailors.
+- Help tailors manage orders, materials, and order statuses.
+- Allow material providers to manage their inventory and material orders.
+
+---
+
+# User Stories
+
+## Client
+
+- AAC, I want to be able to sign-up, sign-in, sign-out to the website safely and securely.
+- AAC, I want to be able to create an order and assign to a specific tailor or tailor shop branch in website.
+- AAC, I want to be able to select a material for the order.
+- AAC, I want to be able to select a material from a provider if I didn’t like any of the in-stock tailor materials.
+- AAC, I want to be able browse among the materials and filter them.
+- AAC, I want to be able to add my measurements and save them to autofill the order form in case of another order.
+- AAC, I want to be able to update my measurements and save changes.
+- AAC, I want to be able to delete my measurements.
+- AAC, I want to be able to book an appointment for measurements in the physical location.
+- AAC, I want to be able to update the order details whenever I want before the Tailor accepting it.
+- AAC, I want to be able to delete the order before accepting it.
+- AAC, I want to be able to reject or approve the order after determining the price and changing the deadline by the tailor.
+- AAC, I want to be able to confirm that my order was delivered.
+- AAC, I want to be able to browse tailoring shops and view a shop profile.
+- AAC, I want to be able to filter the tailoring shops.
+- AAC, I want to be able to view the profile and details of the tailoring shop.
+
+---
+
+## Admin
+
+- AAA, I want to be able to sign-in and sign-out.
+- AAA, I want to be able to create a Tailor account.
+- AAA, I want to be able to create a Provider account.
+
+---
+
+## Tailor
+
+- AAT, I want to be able to sign-in and sign-out safely and securely.
+- AAT, I want to be able to view all orders assigned to me and their status.
+- AAT, I want to be able to view all the material orders that are delivered or will be delivered to me.
+- AAT, I want to be able to either accept or reject the orders that are coming to me.
+- AAT, I want to be able to send a response to the client with a request of confirming the price and the delivery time.
+- AAT, I want to be able to update the status of the location from open, close, or busy.
+- AAT, I want to be able to update the status of the client location from pending to accepted, to in progress, to ready, to in the way.
+- AAT, I want to be able to see a summary of the orders that are assigned to me.
+- AAT, I want to be able to add the in-stock material to the system.
+- AAT, I want to be able to change the in-stock material between the currently unavailable and currently available.
+- AAT, I want to be able to mark a material order as delivered.
+
+---
+
+## Provider
+
+- AAP, I want to be able to sign-in and sign-out safely and securely.
+- AAP, I want to be able to add the in-stock material in the system.
+- AAP, I want to be able to see all order materials sent to me.
+- AAP, I want to be able to accept and reject the order materials sent to me.
+- AAP, I want to be able to update the status of the order from pending to accepted.
+- AAP, I want to be able to update the status of the order from accepted to on the way.
+- AAP, I want to be able to update the information of the materials that are in my stock.
+- AAP, I want to be able to mark the information of the materials that are in my stock as deleted.
+- AAP, I want to be able to mark a specific material at my store as not available.
+
+---
+
+# Entity Relationship Diagram
+
+The following ERD represents the main entities and relationships used in the Thobic platform.
+
+![Thobic ERD](./Image/erd.png)
+
+---
+
+# Wireframes
+
+The following wireframes represent the main user interfaces and flows of the Thobic platform for Clients, Tailors, Providers, and Admins.
+
+![Thobic Wireframes](./Image/ThobicW.png)
+
+---
+
+# Project Structure
+
+```text
+Thobic-Backend/
+│
+├── controllers/
+├── models/
+├── routes/
+├── serializers/
+├── dependencies/
+├── database/
+├── main.py
+├── requirements.txt
+└── README.md
 ```
 
-Once we have the repository on our machines, we can change the name of the directory to your new project name`:
+---
 
-```bash
-mv FastAPI-JWT-Template <YOUR_APP_NAME>
+# Backend
+
+The backend is responsible for handling the application's business logic, database operations, authentication, user roles, orders, materials, measurements, and communication between clients, tailors, and providers.
+
+## Main Backend Responsibilities
+
+- User authentication and authorization
+- Role-based access control
+- Client management
+- Tailor and tailoring shop management
+- Provider management
+- Order management
+- Material management
+- Client measurement management
+- Material order management
+- Order status management
+- Appointment management
+- Database communication
+
+---
+
+# User Roles
+
+The platform contains four main user roles:
+
+| Role     | Description                                                                       |
+| -------- | --------------------------------------------------------------------------------- |
+| Client   | Creates Thawb orders, selects materials, manages measurements, and tracks orders. |
+| Tailor   | Manages tailoring orders, materials, prices, deadlines, and order statuses.       |
+| Provider | Manages material inventory and handles material orders from tailors.              |
+| Admin    | Manages Tailor and Provider accounts.                                             |
+
+---
+
+# Order Flow
+
+The main order process follows this flow:
+
+```text
+Client
+   │
+   ▼
+Select Tailor / Tailoring Shop
+   │
+   ▼
+Select Material
+   │
+   ├──────────────► Tailor Stock
+   │
+   └──────────────► External Provider
+                         │
+                         ▼
+                    Material Delivery
+                         │
+                         ▼
+                       Tailor
+   │
+   ▼
+Submit Measurements & Order Details
+   │
+   ▼
+Tailor Reviews Order
+   │
+   ▼
+Price & Deadline
+   │
+   ▼
+Client Approves / Rejects
+   │
+   ▼
+Order In Progress
+   │
+   ▼
+Ready for Delivery
+   │
+   ▼
+Client Confirms Delivery
 ```
 
-Next, `cd` into your renamed directory:
+---
 
-```bash
-cd <YOUR_APP_NAME>
+# Status Management
+
+## Order Status
+
+```text
+Pending
+   ↓
+Accepted
+   ↓
+In Progress
+   ↓
+Ready
+   ↓
+On the Way
+   ↓
+Delivered
 ```
 
-Finally, remove the existing `.git` information from this template:
+Orders can also be rejected or cancelled depending on their current status.
 
-```bash
-rm -rf .git
+## Tailoring Shop Status
+
+```text
+Open
+Busy
+Closed
 ```
 
-> Removing the `.git` info is important as this is just a starter template provided gere. You do not need the existing git history for this project.
+## Material Order Status
 
-## GitHub setup
-
-To add this project to GitHub, initialize a new Git repository:
-
-```bash
-git init
-git add .
-git commit -m "init commit"
+```text
+Pending
+   ↓
+Accepted
+   ↓
+On the Way
+   ↓
+Delivered
 ```
 
-Make a new repository on [GitHub](https://github.com/) named `<YOUR_PROJECT_NAME>`.
+---
 
-Link your local project to your remote GitHub repo:
+# Future Development
 
-```bash
-git remote add origin https://github.com/<github-username>/<YOUR_PROJECT_NAME>.git
-git push origin main
-```
+The platform can be extended with additional features such as:
 
-> 🚨 Do not copy the above command. It will not work. Your GitHub username will replace `<github-username>` (including the `<` and `>`) in the URL above.
+- Online payment integration
+- Notifications
+- Real-time order tracking
+- Advanced material search and filtering
+- Customer reviews and ratings
+- Delivery management
+- Analytics and reporting
+- Mobile application support
 
-Open the project's folder in your code editor:
+---
 
-```bash
-code .
-```
+# Team
 
-1. Install dependencies (this also creates the virtual environment if it doesn’t exist):
-
-```sh
- pipenv install
-```
-
-1. Activate the virtual environment:
-
-```sh
- pipenv shell
-```
-
-1. Set up your PostgreSQL database:
-
-   - Ensure PostgreSQL is installed and running on your machine.
-   - Create a database named `teas_db` if it does not already exist:
-
-```bash
-createdb YOUR_APP_DB
-```
-
-1. Open the application in Visual Studio Code:
-
-```bash
-code .
-```
-
-1. The database connection string is defined in the `config/environment.py` file which uses environment variables:
-   > use the .env.example and either create a new `.env` file or just remove the .example part in the root of your project and add the below variables
-
-```python
-DATABASE_URL=postgresql+psycopg2://<username>@localhost:5432/<YOUR_APP_DB>
-JWT_SECRET=YOUR_SECRET_KEY
-```
-
-> _Modify your database connection string to use your username as the `<username>`._
-
-1. Seed the database with initial data:
-
-   - Run the `seed.py` file to reset the database by dropping existing tables and repopulating it with starter data:
-
-```bash
-pipenv run python seed.py
-```
-
-> You should see output indicating the database was successfully seeded. If there are any errors, check the `db_URI` in the `config/environment.py` file.
-
-1. Start the development server:
-
-```bash
-pipenv run uvicorn main:app --reload
-```
-
-> You should now have the app running. Visit [`http://127.0.0.1:8000`](http://127.0.0.1:8000) in your browser to confirm it’s working.
-
- 1. Now you can test each endpoint using FastAPI’s built-in documentation.
-
-> Navigate to FastAPI Documentation: Open [`http://localhost:8000/docs`](http://localhost:8000/docs) in your browser.
-
-<br>
-
-### Troubleshooting PostgreSQL
-
-- The database connection string is defined in the `config/environment.py` file:
-
-  ```python
-  DATABASE_URL = "postgresql+psycopg2://<username>@localhost:5432/teas_db"
-  ```
-
-- Ensure your PostgreSQL instance is configured to allow connections with the provided credentials.
-- **_Modify your database connection string to use your username as the `<username>`._**
-
-#### Setting Up a User in PostgreSQL
-
-To connect to a specific PostgreSQL user, use the following command:
-
-```sh
-psql -U <username>
-```
-
-#### Handling "Role Does Not Exist" Error
-
-If you see this error:
-
-```sh
-Error: FATAL: role "<username>" does not exist
-```
-
-it means that the specified user does not exist in PostgreSQL.
-
-#### Creating a New PostgreSQL User
-
-To create the user, run the following command inside `psql`:
-
-```sql
-CREATE ROLE "<username>" WITH LOGIN PASSWORD 'your_secure_password';
-```
-
-> 🔹 **Replace** `<username>` with your desired username and **choose a secure password**.
-
-This will allow you to connect using one of the following database connection strings:
-
-#### Connection Strings
-
-If **no password is required**:
-
-```python
-DATABASE_URL = "postgresql+psycopg2://<username>@localhost:5432/YOUR_APP_DB"
-```
-
-If **a password is required**:
-
-```python
-DATABASE_URL = "postgresql+psycopg2://<username>:<your_secure_password>@localhost:5432/YOUR_APP_DB"
-```
-
-This ensures that PostgreSQL correctly authenticates and allows access to the `YOUR_APP_DB` database.
+Thobic is a software engineering project focused on simplifying the traditional Thawb ordering and tailoring process through a centralized digital platform.
