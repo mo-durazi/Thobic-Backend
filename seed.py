@@ -1,11 +1,13 @@
 # seed.py
 
 from sqlalchemy.orm import sessionmaker, Session
-from data.tea_data import teas_list, comments_list
 from data.user_data import user_list
 from config.environment import DATABASE_URL
 from sqlalchemy import create_engine
 from models.base import Base
+from dotenv import load_dotenv
+load_dotenv()
+
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
@@ -15,8 +17,8 @@ try:
     print("Recreating database...")
     # Dropping (or deleting) the tables and creating them again is for convenience. Once we start to play around with
     # our data, changing our models, this seed program will allow us to rapidly throw out the old data and replace it.
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    #Base.metadata.drop_all(bind=engine)
+    #Base.metadata.create_all(bind=engine)
 
     print("seeding the database...")
     # Seed teas
