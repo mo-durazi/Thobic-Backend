@@ -24,6 +24,12 @@ class UserModel(BaseModel):
         server_default=UserRole.CLIENT.value
     )  # Default role is 'user'
 
+    profile = relationship(
+        "ProfileModel",
+        back_populates="user",
+        uselist=False
+    )
+
     def set_password(self, plain_txt_password: str):
         self.password = pwd_context.hash(plain_txt_password)
 
