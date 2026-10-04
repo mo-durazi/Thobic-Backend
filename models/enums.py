@@ -8,6 +8,12 @@ class UserRole(enum.Enum):
     TAILOR = "tailor"
 
 
+class ShopStatus(enum.Enum):
+    OPEN = "open"
+    CLOSED = "closed"
+    BUSY = "busy"
+
+
 class ProfileStatus(enum.Enum):
     CLOSED = "closed"
     OPEN = "open"
