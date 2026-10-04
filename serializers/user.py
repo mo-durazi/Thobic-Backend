@@ -1,6 +1,7 @@
 # serializers/user.py
 
 from pydantic import BaseModel
+from models.enums import UserRole
 
 # Form Validations
 class UserRegistrationSchema(BaseModel):
@@ -17,6 +18,7 @@ class UserSchema(BaseModel):
     id: int
     username: str
     email: str
+    role: UserRole
 
     class Config:
         orm_mode = True
