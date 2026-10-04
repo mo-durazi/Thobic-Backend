@@ -106,6 +106,16 @@ The following wireframes represent the main user interfaces and flows of the Tho
 
 ---
 
+# Front-end
+
+## Components Hierarchy
+
+![Thobic Components Hierarchy](./Image/c1.png)
+
+![Thobic Front-end](./Image/co2.png)
+
+---
+
 # Project Structure
 
 ```text
@@ -155,95 +165,6 @@ The platform contains four main user roles:
 | Tailor   | Manages tailoring orders, materials, prices, deadlines, and order statuses.       |
 | Provider | Manages material inventory and handles material orders from tailors.              |
 | Admin    | Manages Tailor and Provider accounts.                                             |
-
----
-
-# Order Flow
-
-The main order process follows this flow:
-
-```text
-Client
-   │
-   ▼
-Select Tailor / Tailoring Shop
-   │
-   ▼
-Select Material
-   │
-   ├──────────────► Tailor Stock
-   │
-   └──────────────► External Provider
-                         │
-                         ▼
-                    Material Delivery
-                         │
-                         ▼
-                       Tailor
-   │
-   ▼
-Submit Measurements & Order Details
-   │
-   ▼
-Tailor Reviews Order
-   │
-   ▼
-Price & Deadline
-   │
-   ▼
-Client Approves / Rejects
-   │
-   ▼
-Order In Progress
-   │
-   ▼
-Ready for Delivery
-   │
-   ▼
-Client Confirms Delivery
-```
-
----
-
-# Status Management
-
-## Order Status
-
-```text
-Pending
-   ↓
-Accepted
-   ↓
-In Progress
-   ↓
-Ready
-   ↓
-On the Way
-   ↓
-Delivered
-```
-
-Orders can also be rejected or cancelled depending on their current status.
-
-## Tailoring Shop Status
-
-```text
-Open
-Busy
-Closed
-```
-
-## Material Order Status
-
-```text
-Pending
-   ↓
-Accepted
-   ↓
-On the Way
-   ↓
-Delivered
-```
 
 ---
 
