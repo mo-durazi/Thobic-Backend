@@ -16,7 +16,7 @@ class MaterialOrderModel(BaseModel):
     ordered_from = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     # Connected Thoub order
-    thoub_order_id = Column(Integer, ForeignKey("thoub_orders.id"), nullable=False, unique = True)
+    # thoub_order_id = Column(Integer, ForeignKey("thoub_orders.id"), nullable=False, unique = True)
     
     # Amount of material ordered in metre
     amount = Column(Numeric(8, 2), nullable=False)
@@ -25,7 +25,7 @@ class MaterialOrderModel(BaseModel):
     price = Column(Numeric(10, 3), nullable=False) #TODO: need a function to calculate price based on material price and amount
 
     # Expected delivery date of the order
-    expected_delivery_date = Column( Date, Nullable=True)
+    expected_delivery_date = Column(Date, nullable=True)
     
     # Status of the order
     status = Column(
@@ -49,6 +49,6 @@ class MaterialOrderModel(BaseModel):
 
     #-------------RELATIONSHIPS-----------------
     provider = relationship("UserModel", foreign_keys=[ordered_from])
-    thoub_order = relationship("ThoubOrderModel", back_populates="material_order", uselist=False)
+    # thoub_order = relationship("ThoubOrderModel", back_populates="material_order", uselist=False)
 
     

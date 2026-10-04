@@ -12,12 +12,12 @@ from models.enums import (
 
 class MaterialModel(BaseModel):
     __tablename__ = "materials"
-    __table_args__ = (CheckConstraint("price >= 0", name="check_price_positive"),)
+    __table_args__ = (CheckConstraint("price >= 0.01", name="check_price_positive"),)
 
     source_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     name = Column(String, nullable=False)
-    price = Column(Numeric(10, 2), nullable=False, min=0.01)  # Price should be a positive number with two decimal places
+    price = Column(Numeric(10, 2), nullable=False)
     description = Column(String, nullable=True)
     colour = Column(String, nullable=False)
 
