@@ -25,3 +25,23 @@ class OrderStatus(enum.Enum):
     ON_THE_WAY = "on_the_way"
     DELIVERED = "delivered"
     CANCELED = "canceled"
+
+class MaterialTexture(enum.Enum):
+    SMOOTH = "smooth"
+    ROUGH = "rough"
+
+class MaterialPattern(enum.Enum):
+    PLAIN = "plain"
+    PATTERNED = "patterned"
+
+class MaterialSeason(enum.Enum):
+    SUMMER = "summer"
+    WINTER = "winter"
+    ALL_SEASONS = "all_seasons"
+    SPRING = "spring"
+
+class stand(enum.Enum):
+    STAND = "stand"
+    HALF_STAND = "half_stand"
+    LOOSE = "loose"
+
