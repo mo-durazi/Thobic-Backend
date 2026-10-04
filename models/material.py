@@ -15,10 +15,9 @@ class MaterialModel(BaseModel):
 
     source_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
+    name = Column(String, nullable=False)
     price = Column(Float, nullable=False)
     description = Column(String, nullable=True)
-
-    name = Column(String, nullable=False)
     colour = Column(String, nullable=False)
 
     texture = Column(
