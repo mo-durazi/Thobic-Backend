@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 fastapi = "*"
 uvicorn = "*"
-sqlalchemy = "*"
 psycopg2-binary = "*"
 pydantic = "*"
 passlib = "*"
@@ -14,6 +13,7 @@ bcrypt = "==4.0.1"
 pyjwt = "*"
 alembic = "*"
 python-dotenv = "*"
+sqlalchemy = "*"
 
 [dev-packages]
 pytest = "*"
