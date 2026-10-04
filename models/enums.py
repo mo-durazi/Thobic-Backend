@@ -40,8 +40,14 @@ class MaterialSeason(enum.Enum):
     ALL_SEASONS = "all_seasons"
     SPRING = "spring"
 
-class stand(enum.Enum):
+class MaterialStand(enum.Enum):
     STAND = "stand"
     HALF_STAND = "half_stand"
     LOOSE = "loose"
 
+class MaterialOrderStatus(enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    ON_THE_WAY = "on_the_way"
+    DELIVERED = "delivered"
