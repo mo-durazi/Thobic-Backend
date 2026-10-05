@@ -118,30 +118,31 @@ def edit_thoub_order(
     if current_user.role != UserRole.CLIENT:
         raise HTTPException(status_code=403, detail="Only clients can edit their orders.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, client_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
     if order.status != OrderStatus.PENDING:
         raise HTTPException(status_code=409, detail="Orders can only be edited while they are pending.")
 
-    if "material_id" in payload:
-        material = db.query(MaterialModel).filter_by(id=payload["material_id"]).first()
+   
+    if payload.material_id is not None:
+        material = db.query(MaterialModel).filter_by(id=payload.material_id).first()
         if not material or material.is_deleted or not material.is_available:
             raise HTTPException(status_code=400, detail="Selected material is unavailable or deleted.")
-        order.material_id = payload["material_id"]
+        order.material_id = payload.material_id
 
-    if "material_amount" in payload:
-        order.material_amount = payload["material_amount"]
-    if "style" in payload:
-        order.style = payload["style"]
-    if "requested_deadline" in payload:
-        req_deadline = payload["requested_deadline"]
-        if req_deadline < date.today():
+    if payload.material_amount is not None:
+        order.material_amount = payload.material_amount
+    if payload.style is not None:
+        order.style = payload.style
+    if payload.requested_deadline is not None:
+        if payload.requested_deadline < date.today():
             raise HTTPException(status_code=400, detail="Requested deadline must be on or after today.")
-        order.requested_deadline = req_deadline
-    if "note" in payload:
-        order.note = payload["note"]
+        order.requested_deadline = payload.requested_deadline
+    if payload.note is not None:
+        order.note = payload.note
+
 
     db.commit()
     db.refresh(order)
@@ -158,7 +159,7 @@ def delete_thoub_order(
     if current_user.role != UserRole.CLIENT:
         raise HTTPException(status_code=403, detail="Only clients can delete their orders.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, client_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
@@ -173,7 +174,7 @@ def delete_thoub_order(
 @router.patch("/{order_id}/tailor-accept")
 def tailor_accept_order(
     order_id: int,
-    payload: dict,
+    payload: TailorAcceptSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
@@ -181,25 +182,26 @@ def tailor_accept_order(
     if current_user.role != UserRole.TAILOR:
         raise HTTPException(status_code=403, detail="Only tailors can accept orders.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, tailor_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
     if order.status != OrderStatus.PENDING:
         raise HTTPException(status_code=409, detail="Can only accept pending orders.")
 
-    price = payload.get("price")
-    final_deadline = payload.get("final_deadline")
+    # Handle Decimal vs float arithmetic safely
+    mat_price = Decimal(str(order.material.price))
+    mat_amount = Decimal(str(order.material_amount))
+    min_price = float(mat_price * mat_amount)
 
-    min_price = order.material.price * order.material_amount
-    if price < min_price:
+    if payload.price < min_price:
         raise HTTPException(status_code=400, detail=f"Price cannot be less than material cost ({min_price}).")
 
-    if final_deadline < order.requested_deadline:
+    if order.requested_deadline and payload.final_deadline < order.requested_deadline:
         raise HTTPException(status_code=400, detail="Final deadline cannot be before the requested deadline.")
 
-    order.price = price
-    order.final_deadline = final_deadline
+    order.price = payload.price
+    order.final_deadline = payload.final_deadline
     order.status = OrderStatus.ACCEPTED
 
     db.commit()
