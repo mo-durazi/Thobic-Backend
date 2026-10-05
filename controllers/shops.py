@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from database import get_db
 from models.user import UserModel
-from models.profile import ProfileModel  # Adjust path if your profile model is named differently
+from models.profile import ProfileModel
 from models.enums import UserRole, ShopStatus
 
 router = APIRouter(prefix="/shops", tags=["Shops"])
@@ -20,10 +20,7 @@ def get_shops(
     Public landing page endpoint: Browse and filter tailoring shops.
     Filters by name, branch, and open/busy/close status.
     """
-    # Query users who are tailors and have a profile
     query = db.query(UserModel).filter(UserModel.role == UserRole.TAILOR)
-
-    # We join with ProfileModel to filter by profile attributes (display_name, branch, status)
     query = query.join(ProfileModel, UserModel.id == ProfileModel.user_id)
 
     if name:
@@ -37,10 +34,9 @@ def get_shops(
 
     tailors = query.all()
 
-    # Format output for the front-end shop cards
     shops_list = []
-    for tailor in tailor_users := tailors:
-        profile = tailor.profile # assuming a relationship named 'profile' exists on UserModel
+    for tailor in tailors:
+        profile = tailor.profile if hasattr(tailor, "profile") else None
         shops_list.append({
             "id": tailor.id,
             "username": tailor.username,
@@ -56,7 +52,7 @@ def get_shops(
     return shops_list
 
 
-    @router.get("/{shop_id}")
+@router.get("/{shop_id}")
 def get_shop_profile(
     shop_id: int,
     db: Session = Depends(get_db)
@@ -71,7 +67,6 @@ def get_shop_profile(
 
     profile = db.query(ProfileModel).filter_by(user_id=tailor.id).first()
 
-    # Fetch materials belonging to this tailor shop
     materials = [
         {
             "id": mat.id,
@@ -85,7 +80,7 @@ def get_shop_profile(
             "is_available": mat.is_available,
             "image_url": mat.image_url
         }
-        for mat in tailor.materials if not mat.is_deleted # assuming 'materials' relationship exists
+        for mat in tailor.materials if not mat.is_deleted
     ] if hasattr(tailor, "materials") else []
 
     return {
@@ -102,3 +97,4 @@ def get_shop_profile(
         "phone_number": profile.phone_number if profile else None,
         "materials": materials
     }
+    
