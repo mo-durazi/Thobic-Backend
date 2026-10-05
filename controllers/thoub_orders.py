@@ -130,3 +130,41 @@ def tailor_accept_order(
 
 
 
+@router.patch("/{order_id}/client-respond")
+def client_respond_order(
+    order_id: int,
+    approve: bool,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Client approves (confirmed) or declines (client_rejected) an accepted order."""
+    if current_user.role != UserRole.CLIENT:
+        raise HTTPException(status_code=403, detail="Only clients can respond to order updates.")
+
+    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    if order.status != OrderStatus.ACCEPTED:
+        raise HTTPException(status_code=409, detail="Order must be in 'accepted' status to respond.")
+
+    if approve:
+        order.status = OrderStatus.CONFIRMED
+
+        # Check if material is from an external provider Create Material Order automatically
+        if order.material.source_id != order.tailor_id:
+            material_order_price = order.material.price * order.material_amount
+            material_order = MaterialOrderModel(
+                orderedFrom=order.material.source_id,
+                thoub_order_id=order.order_id,
+                amount=order.material_amount,
+                price=material_order_price,
+                status="pending"
+            )
+            db.add(material_order)
+    else:
+        order.status = OrderStatus.CLIENT_REJECTED
+
+    db.commit()
+    db.refresh(order)
+    return {"message": f"Order status updated to {order.status}", "order": order}
