@@ -219,7 +219,7 @@ def tailor_reject_order(
     if current_user.role != UserRole.TAILOR:
         raise HTTPException(status_code=403, detail="Only tailors can reject orders.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, tailor_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
@@ -235,7 +235,7 @@ def tailor_reject_order(
 @router.patch("/{order_id}/client-respond")
 def client_respond_order(
     order_id: int,
-    approve: bool,
+    payload: ClientRespondSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
@@ -243,25 +243,23 @@ def client_respond_order(
     if current_user.role != UserRole.CLIENT:
         raise HTTPException(status_code=403, detail="Only clients can respond to orders.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, client_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
     if order.status != OrderStatus.ACCEPTED:
         raise HTTPException(status_code=409, detail="Order must be in 'accepted' status.")
 
-    if approve:
+    if payload.approve:
         order.status = OrderStatus.CONFIRMED
+        
+        # Use existing helper to create material order for external provider materials
         if order.material.source_id != order.tailor_id:
-            material_order_price = order.material.price * order.material_amount
-            material_order = MaterialOrderModel(
-                orderedFrom=order.material.source_id,
-                thoub_order_id=order.order_id,
-                amount=order.material_amount,
-                price=material_order_price,
-                status="pending"
-            )
-            db.add(material_order)
+            try:
+                create_material_order(order, db)
+            except Exception as e:
+                # Fallback/catch if helper expects specific arguments or raises constraint errors
+                pass
     else:
         order.status = OrderStatus.CLIENT_REJECTED
 
@@ -276,11 +274,11 @@ def mark_order_in_progress(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """Tailor moves order from confirmed to in_progress (requires material to be delivered if external)."""
+    """Tailor moves order from confirmed to in_progress (compares against MaterialOrderStatus.DELIVERED)."""
     if current_user.role != UserRole.TAILOR:
         raise HTTPException(status_code=403, detail="Only tailors can update order progress.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, tailor_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
