@@ -12,6 +12,7 @@ from models.client_measurements import ClientMeasurementsModel
 from models.material_order import MaterialOrderModel
 from models.enums import OrderStatus, UserRole, MaterialOrderStatus
 from dependencies.get_current_user import get_current_user
+
 # Import the existing material order helper function from controllers.material_order
 from controllers.material_order import create_material_order
 
@@ -22,9 +23,10 @@ from serializers.thoub_order import (
     TailorAcceptSchema,
     ClientRespondSchema
 )
+
 router = APIRouter(prefix="/orders", tags=["Thoub Orders"])
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_thoub_order(
     payload: ThoubOrderCreateSchema,
     db: Session = Depends(get_db),
