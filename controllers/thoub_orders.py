@@ -143,7 +143,6 @@ def edit_thoub_order(
     if payload.note is not None:
         order.note = payload.note
 
-
     db.commit()
     db.refresh(order)
     return {"message": "Order updated successfully", "order": order}
@@ -285,8 +284,8 @@ def mark_order_in_progress(
     if order.status != OrderStatus.CONFIRMED:
         raise HTTPException(status_code=409, detail="Order must be confirmed before starting work.")
 
-    material_order = db.query(MaterialOrderModel).filter_by(thoub_order_id=order.order_id).first()
-    if material_order and material_order.status != "delivered":
+    material_order = db.query(MaterialOrderModel).filter_by(thoub_order_id=order.id).first()
+    if material_order and material_order.status != MaterialOrderStatus.DELIVERED:
         raise HTTPException(status_code=409, detail="Cannot start work until the provider material is delivered.")
 
     order.status = OrderStatus.IN_PROGRESS
@@ -305,7 +304,7 @@ def mark_order_ready(
     if current_user.role != UserRole.TAILOR:
         raise HTTPException(status_code=403, detail="Only tailors can update order progress.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, tailor_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
@@ -328,7 +327,7 @@ def mark_order_on_the_way(
     if current_user.role != UserRole.TAILOR:
         raise HTTPException(status_code=403, detail="Only tailors can update order progress.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, tailor_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
@@ -351,7 +350,7 @@ def mark_order_delivered(
     if current_user.role != UserRole.CLIENT:
         raise HTTPException(status_code=403, detail="Only the client can confirm delivery.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, client_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
