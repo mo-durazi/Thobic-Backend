@@ -14,6 +14,8 @@ from controllers.materials import router as MaterialsRouter
 from controllers.admin import router as AdminRouter
 from controllers.material_order import router as MaterialOrderRouter
 from controllers.thoub_orders import router as ThoubOrdersRouter
+from controllers.shops import router as ShopsRouter
+
 
 
 tags_metadata = [
@@ -56,6 +58,8 @@ app.include_router(ClientMeasurementsRouter, prefix="/api", tags = ["Client Meas
 app.include_router(MaterialsRouter, prefix="/api", tags = ["Materials"])
 app.include_router(MaterialOrderRouter, prefix="/api", tags = ["Material Orders"])
 app.include_router(ThoubOrdersRouter, prefix="/api", tags = ["Thoub Orders"])
+app.include_router(ShopsRouter, prefix="/api", tags=["Shops"])
+
 
 @app.get("/health")
 def health_check():
