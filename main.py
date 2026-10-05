@@ -13,6 +13,8 @@ from controllers.client_measurements import router as ClientMeasurementsRouter
 from controllers.materials import router as MaterialsRouter
 from controllers.admin import router as AdminRouter
 from controllers.material_order import router as MaterialOrderRouter
+from controllers.thoub_orders import router as ThoubOrdersRouter
+
 
 tags_metadata = [
     {"name": "Auth", "description": "Register, login, current user"},
@@ -31,7 +33,7 @@ app = FastAPI(
 )
 
 
-# Allow your React dev server(s) to call the API
+# Allow React dev server to call the API
 origins = [
     origin.strip()
     for origin in os.getenv("CORS_ORIGINS", "").split(",")
@@ -53,6 +55,7 @@ app.include_router(ProfilesRouter, prefix="/api", tags = ["Profiles"])
 app.include_router(ClientMeasurementsRouter, prefix="/api", tags = ["Client Measurements"])
 app.include_router(MaterialsRouter, prefix="/api", tags = ["Materials"])
 app.include_router(MaterialOrderRouter, prefix="/api", tags = ["Material Orders"])
+app.include_router(ThoubOrdersRouter, prefix="/api", tags = ["Thoub Orders"])
 
 @app.get("/health")
 def health_check():
