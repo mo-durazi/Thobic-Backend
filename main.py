@@ -11,6 +11,8 @@ from controllers.users import router as UsersRouter
 
 from controllers.profiles import router as ProfilesRouter
 
+from controllers.client_measurements import router as ClientMeasurementsRouter
+
 
 app = FastAPI()
 
@@ -30,6 +32,7 @@ app.add_middleware(
 
 app.include_router(UsersRouter, prefix='/api')
 app.include_router(ProfilesRouter, prefix='/api')
+app.include_router(ClientMeasurementsRouter, prefix='/api')
 
 @app.get('/health')
 def health_check():
