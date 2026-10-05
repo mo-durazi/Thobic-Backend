@@ -9,6 +9,8 @@ from fastapi import FastAPI
 # Controllers
 from controllers.users import router as UsersRouter
 
+from controllers.profiles import router as ProfilesRouter
+
 
 app = FastAPI()
 
@@ -27,6 +29,7 @@ app.add_middleware(
 )
 
 app.include_router(UsersRouter, prefix='/api')
+app.include_router(ProfilesRouter, prefix='/api')
 
 @app.get('/health')
 def health_check():
