@@ -26,3 +26,9 @@ class UserSchema(BaseModel):
 class UserTokenSchema(BaseModel):
     token: str
     message: str
+
+class AdminCreateUserSchema(BaseModel):
+    username: str
+    email: str
+    password: str
+    role: UserRole

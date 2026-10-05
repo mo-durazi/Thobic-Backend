@@ -1,22 +1,23 @@
 import os
-from fastapi.middleware.cors import CORSMiddleware
 
 from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 # Controllers
 from controllers.users import router as UsersRouter
-
 from controllers.profiles import router as ProfilesRouter
-
 from controllers.client_measurements import router as ClientMeasurementsRouter
+from controllers.materials import router as MaterialsRouter
+from controllers.admin import router as AdminRouter
 
 
 app = FastAPI()
 
-# ✅ Allow your React dev server(s) to call the API
+
+# Allow your React dev server(s) to call the API
 origins = [
     origin.strip()
     for origin in os.getenv("CORS_ORIGINS", "").split(",")
@@ -25,17 +26,19 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,     # Which sites can call this API
-    allow_methods=["*"],       # Allow all HTTP methods (GET, POST, PUT, DELETE, etc.)
-    allow_headers=["*"],       # Allow all headers (e.g., Content-Type, Authorization)
+    allow_origins=origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-app.include_router(UsersRouter, prefix='/api')
-app.include_router(ProfilesRouter, prefix='/api')
-app.include_router(ClientMeasurementsRouter, prefix='/api')
 
-@app.get('/health')
+# API Routes
+app.include_router(UsersRouter, prefix="/api")
+app.include_router(ProfilesRouter, prefix="/api")
+app.include_router(ClientMeasurementsRouter, prefix="/api")
+app.include_router(MaterialsRouter, prefix="/api")
+app.include_router(AdminRouter, prefix="/api")
+
+@app.get("/health")
 def health_check():
-  return {'message': 'Api is running'}
-
-
+    return {"message": "Api is running"}
