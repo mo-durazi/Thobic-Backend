@@ -55,6 +55,8 @@ def create_thoub_order(
     material = db.query(MaterialModel).filter_by(id=payload.material_id).first()
     if not material or material.is_deleted or not material.is_available:
         raise HTTPException(status_code=400, detail="Selected material is unavailable or deleted.")
+    if material.source_id != payload.tailor_id and material.source.role != UserRole.PROVIDER:
+        raise HTTPException(status_code=400, detail="This material isn't available from the selected shop.")
 
     if payload.requested_deadline and payload.requested_deadline < date.today():
         raise HTTPException(status_code=400, detail="Requested deadline must be on or after today.")
@@ -132,6 +134,8 @@ def edit_thoub_order(
         material = db.query(MaterialModel).filter_by(id=payload.material_id).first()
         if not material or material.is_deleted or not material.is_available:
             raise HTTPException(status_code=400, detail="Selected material is unavailable or deleted.")
+        if material.source_id != order.tailor_id and material.source.role != UserRole.PROVIDER:
+            raise HTTPException(status_code=400, detail="This material isn't available from the selected shop.")
         order.material_id = payload.material_id
 
     if payload.material_amount is not None:
