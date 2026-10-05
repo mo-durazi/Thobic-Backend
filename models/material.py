@@ -65,3 +65,10 @@ class MaterialModel(BaseModel):
     image_url = Column(String, nullable=True)
 
     source = relationship("UserModel")
+
+    @property
+    def source_name(self):
+        # to display the tailor or provider name on the material cards
+        if self.source.profile:
+            return self.source.profile.display_name
+        return self.source.username

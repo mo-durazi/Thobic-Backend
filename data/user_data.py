@@ -1,17 +1,40 @@
 from models.user import UserModel
+from models.enums import UserRole
+
+# All demo accounts use the same password so they are easy to log in with.
+DEMO_PASSWORD = "123"
+
+# (username, email, role)
+USERS = [
+    # Admin
+    ("admin", "admin@thobic.bh", UserRole.ADMIN),
+
+    # Tailor shops
+    ("alwasmi_tailors", "info@alwasmi.bh", UserRole.TAILOR),
+    ("dar_alkhayat", "contact@daralkhayat.bh", UserRole.TAILOR),
+
+    # Material providers
+    ("gulf_textiles", "sales@gulftextiles.bh", UserRole.PROVIDER),
+    ("japan_fabric_house", "orders@jfh.bh", UserRole.PROVIDER),
+
+    # Clients
+    ("arjun_dev", "arjun@devmail.in", UserRole.CLIENT),
+    ("emma_johnson", "emma.johnson@email.com", UserRole.CLIENT),
+    ("fatima_ali", "fatima.ali@mail.ae", UserRole.CLIENT),
+    ("lucas_silva", "lucas.silva@correo.br", UserRole.CLIENT),
+    ("elena_popov", "elena.popov@mail.ru", UserRole.CLIENT),
+]
+
 
 def create_test_users():
-    user1 = UserModel(username="arjun_dev", email="arjun@devmail.in")
-    user1.set_password("123")
-    user2 = UserModel(username="emma_johnson", email="emma.johnson@email.com")
-    user2.set_password("123")
-    user3 = UserModel(username="fatima_ali", email="fatima.ali@mail.ae")
-    user3.set_password("123")
-    user4 = UserModel(username="lucas_silva", email="lucas.silva@correo.br")
-    user4.set_password("123")
-    user5 = UserModel(username="elena_popov", email="elena.popov@mail.ru")
-    user5.set_password("123")
+    users = []
 
-    return [user1, user2, user3, user4, user5]
+    for username, email, role in USERS:
+        user = UserModel(username=username, email=email, role=role)
+        user.set_password(DEMO_PASSWORD)
+        users.append(user)
+
+    return users
+
 
 user_list = create_test_users()
