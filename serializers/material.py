@@ -44,6 +44,7 @@ class MaterialUpdateSchema(BaseModel):
 class MaterialSchema(MaterialBaseSchema):
     id: int
     source_id: int
+    source_name: str
 
     class Config:
         from_attributes = True
