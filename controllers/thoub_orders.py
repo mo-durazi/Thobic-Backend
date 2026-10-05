@@ -106,9 +106,8 @@ def get_thoub_order_by_id(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
-    if current_user.role == UserRole.CLIENT and order.client_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied.")
-    if current_user.role == UserRole.TAILOR and order.tailor_id != current_user.id:
+    is_involved = current_user.id in (order.client_id, order.tailor_id)
+    if not is_involved and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Access denied.")
 
     return order
