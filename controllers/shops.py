@@ -5,11 +5,12 @@ from typing import List, Optional
 from database import get_db
 from models.user import UserModel
 from models.profile import ProfileModel
+from models.material import MaterialModel
 from models.enums import UserRole, ShopStatus
 
 router = APIRouter(prefix="/shops", tags=["Shops"])
 
-@router.get("/", response_model=List[dict])
+@router.get("", response_model=List[dict])
 def get_shops(
     name: Optional[str] = Query(None, description="Filter by shop/display name"),
     branch: Optional[str] = Query(None, description="Filter by branch name"),
@@ -18,7 +19,6 @@ def get_shops(
 ):
     """
     Public landing page endpoint: Browse and filter tailoring shops.
-    Filters by name, branch, and open/busy/close status.
     """
     query = db.query(UserModel).filter(UserModel.role == UserRole.TAILOR)
     query = query.join(ProfileModel, UserModel.id == ProfileModel.user_id)
@@ -36,7 +36,8 @@ def get_shops(
 
     shops_list = []
     for tailor in tailors:
-        profile = tailor.profile if hasattr(tailor, "profile") else None
+        # Fetch profile safely
+        profile = db.query(ProfileModel).filter_by(user_id=tailor.id).first()
         shops_list.append({
             "id": tailor.id,
             "username": tailor.username,
@@ -58,7 +59,7 @@ def get_shop_profile(
     db: Session = Depends(get_db)
 ):
     """
-    Shop Profile page: Show specific shop details and in-stock materials to start an order.
+    Shop Profile page: Show specific shop details and query their stock materials directly via source_id.
     """
     tailor = db.query(UserModel).filter(UserModel.id == shop_id, UserModel.role == UserRole.TAILOR).first()
     
@@ -66,6 +67,9 @@ def get_shop_profile(
         raise HTTPException(status_code=404, detail="Tailoring shop not found.")
 
     profile = db.query(ProfileModel).filter_by(user_id=tailor.id).first()
+
+    # Query materials directly using source_id to avoid missing relationship bugs
+    materials_query = db.query(MaterialModel).filter_by(source_id=tailor.id, is_deleted=False).all()
 
     materials = [
         {
@@ -80,8 +84,8 @@ def get_shop_profile(
             "is_available": mat.is_available,
             "image_url": mat.image_url
         }
-        for mat in tailor.materials if not mat.is_deleted
-    ] if hasattr(tailor, "materials") else []
+        for mat in materials_query
+    ]
 
     return {
         "id": tailor.id,
@@ -97,4 +101,3 @@ def get_shop_profile(
         "phone_number": profile.phone_number if profile else None,
         "materials": materials
     }
-    
