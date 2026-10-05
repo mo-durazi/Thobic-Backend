@@ -253,14 +253,7 @@ def client_respond_order(
 
     if payload.approve:
         order.status = OrderStatus.CONFIRMED
-        
-        # Use existing helper to create material order for external provider materials
-        if order.material.source_id != order.tailor_id:
-            try:
-                create_material_order(order, db)
-            except Exception as e:
-                # Fallback/catch if helper expects specific arguments or raises constraint errors
-                pass
+        create_material_order(order, db)
     else:
         order.status = OrderStatus.CLIENT_REJECTED
 
