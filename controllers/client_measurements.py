@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies.get_current_user import get_current_user
+from dependencies.role_required import require_role
 from models.user import UserModel
 from models.client_measurements import ClientMeasurementsModel
 from serializers.client_measurements import (
@@ -22,7 +22,7 @@ router = APIRouter()
 def create_measurements(
     measurements: ClientMeasurementsCreateSchema,
     db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user),
+    current_user: UserModel = Depends(require_role("client")),
 ):
     existing_measurements = (
         db.query(ClientMeasurementsModel)
@@ -54,7 +54,7 @@ def create_measurements(
 )
 def get_my_measurements(
     db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user),
+    current_user: UserModel = Depends(require_role("client")),
 ):
     measurements = (
         db.query(ClientMeasurementsModel)
@@ -78,7 +78,7 @@ def get_my_measurements(
 def update_my_measurements(
     measurements_data: ClientMeasurementsUpdateSchema,
     db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user),
+    current_user: UserModel = Depends(require_role("client")),
 ):
     measurements = (
         db.query(ClientMeasurementsModel)
@@ -109,7 +109,7 @@ def update_my_measurements(
 )
 def delete_my_measurements(
     db: Session = Depends(get_db),
-    current_user: UserModel = Depends(get_current_user),
+    current_user: UserModel = Depends(require_role("client")),
 ):
     measurements = (
         db.query(ClientMeasurementsModel)
