@@ -74,6 +74,69 @@ def get_my_orders(
         raise HTTPException(status_code=403, detail="Unauthorized access to orders.")
 
 
+@router.put("/{order_id}")
+def edit_thoub_order(
+    order_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Client can edit an order ONLY while it is pending."""
+    if current_user.role != UserRole.CLIENT:
+        raise HTTPException(status_code=403, detail="Only clients can edit their orders.")
+
+    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    if order.status != OrderStatus.PENDING:
+        raise HTTPException(status_code=409, detail="Orders can only be edited while they are pending.")
+
+    if "material_id" in payload:
+        material = db.query(MaterialModel).filter_by(id=payload["material_id"]).first()
+        if not material or material.is_deleted or not material.is_available:
+            raise HTTPException(status_code=400, detail="Selected material is unavailable or deleted.")
+        order.material_id = payload["material_id"]
+
+    if "material_amount" in payload:
+        order.material_amount = payload["material_amount"]
+    if "style" in payload:
+        order.style = payload["style"]
+    if "requested_deadline" in payload:
+        req_deadline = payload["requested_deadline"]
+        if req_deadline < date.today():
+            raise HTTPException(status_code=400, detail="Requested deadline must be on or after today.")
+        order.requested_deadline = req_deadline
+    if "note" in payload:
+        order.note = payload["note"]
+
+    db.commit()
+    db.refresh(order)
+    return {"message": "Order updated successfully", "order": order}
+
+
+@router.delete("/{order_id}", status_code=status.HTTP_200_OK)
+def delete_thoub_order(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Client can delete an order ONLY while it is pending."""
+    if current_user.role != UserRole.CLIENT:
+        raise HTTPException(status_code=403, detail="Only clients can delete their orders.")
+
+    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    if order.status != OrderStatus.PENDING:
+        raise HTTPException(status_code=409, detail="Orders can only be deleted while they are pending.")
+
+    db.delete(order)
+    db.commit()
+    return {"message": "Order deleted successfully"}
+
+
 @router.patch("/{order_id}/tailor-accept")
 def tailor_accept_order(
     order_id: int,
@@ -154,7 +217,6 @@ def client_respond_order(
 
     if approve:
         order.status = OrderStatus.CONFIRMED
-        # If external material, trigger material order creation
         if order.material.source_id != order.tailor_id:
             material_order_price = order.material.price * order.material_amount
             material_order = MaterialOrderModel(
@@ -173,19 +235,13 @@ def client_respond_order(
     return {"message": f"Order status updated to {order.status}", "order": order}
 
 
-
-# NEW TAILOR PROGRESS ROUTES
-
 @router.patch("/{order_id}/in-progress")
 def mark_order_in_progress(
     order_id: int,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """
-    Tailor moves order from confirmed to in_progress.
-    Constraint: Only allowed if no material order exists or if the material order status is 'delivered'.
-    """
+    """Tailor moves order from confirmed to in_progress (requires material to be delivered if external)."""
     if current_user.role != UserRole.TAILOR:
         raise HTTPException(status_code=403, detail="Only tailors can update order progress.")
 
@@ -196,7 +252,6 @@ def mark_order_in_progress(
     if order.status != OrderStatus.CONFIRMED:
         raise HTTPException(status_code=409, detail="Order must be confirmed before starting work.")
 
-    # Check material order constraint
     material_order = db.query(MaterialOrderModel).filter_by(thoub_order_id=order.order_id).first()
     if material_order and material_order.status != "delivered":
         raise HTTPException(status_code=409, detail="Cannot start work until the provider material is delivered.")
