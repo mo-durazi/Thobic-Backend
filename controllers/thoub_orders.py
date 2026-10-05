@@ -88,10 +88,29 @@ def get_my_orders(
         raise HTTPException(status_code=403, detail="Unauthorized access to orders.")
 
 
+@router.get("/{order_id}")
+def get_thoub_order_by_id(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Get details for a specific order (accessible by involved client or tailor, or admin)."""
+    order = db.query(ThoubOrderModel).filter_by(id=order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    if current_user.role == UserRole.CLIENT and order.client_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    if current_user.role == UserRole.TAILOR and order.tailor_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    return order
+
+
 @router.put("/{order_id}")
 def edit_thoub_order(
     order_id: int,
-    payload: dict,
+    payload: ThoubOrderUpdateSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
