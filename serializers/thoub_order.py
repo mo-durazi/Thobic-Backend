@@ -1,6 +1,6 @@
 # serializers/thoub_order.py
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import date, datetime
 from typing import Optional, Dict, Any
 from models.enums import OrderStatus
 
@@ -25,3 +25,22 @@ class TailorAcceptSchema(BaseModel):
 
 class ClientRespondSchema(BaseModel):
     approve: bool
+
+
+class ThoubOrderSchema(BaseModel):
+    id: int
+    client_id: int
+    tailor_id: int
+    material_id: int
+    material_amount: float
+    price: Optional[float] = None
+    measurements_snapshot: Dict[str, Any]
+    style: Dict[str, Any]
+    status: OrderStatus
+    requested_deadline: Optional[date] = None
+    final_deadline: Optional[date] = None
+    note: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
