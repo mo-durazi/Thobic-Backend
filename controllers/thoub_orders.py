@@ -72,5 +72,23 @@ def create_thoub_order(
     db.refresh(new_order)
     return new_order
 
+@router.get("/my-orders", response_model=List[dict])
+def get_my_orders(
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """List all orders for the logged-in client or tailor."""
+    if current_user.role == UserRole.CLIENT:
+        orders = db.query(ThoubOrderModel).filter_by(client_id=current_user.id).all()
+    elif current_user.role == UserRole.TAILOR:
+        orders = db.query(ThoubOrderModel).filter_by(tailor_id=current_user.id).all()
+    else:
+        raise HTTPException(status_code=403, detail="Unauthorized access to orders.")
+    return orders
 
 
+
+
+db.commit()
+    db.refresh(order)
+    return {"message": f"Order status updated to {order.status}", "order": order}
