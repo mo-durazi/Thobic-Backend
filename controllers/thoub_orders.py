@@ -21,12 +21,13 @@ from serializers.thoub_order import (
     ThoubOrderCreateSchema,
     ThoubOrderUpdateSchema,
     TailorAcceptSchema,
-    ClientRespondSchema
+    ClientRespondSchema,
+    ThoubOrderSchema,
 )
 
 router = APIRouter(prefix="/orders", tags=["Thoub Orders"])
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ThoubOrderSchema, status_code=status.HTTP_201_CREATED)
 def create_thoub_order(
     payload: ThoubOrderCreateSchema,
     db: Session = Depends(get_db),
@@ -55,6 +56,8 @@ def create_thoub_order(
     material = db.query(MaterialModel).filter_by(id=payload.material_id).first()
     if not material or material.is_deleted or not material.is_available:
         raise HTTPException(status_code=400, detail="Selected material is unavailable or deleted.")
+    if material.source_id != payload.tailor_id and material.source.role != UserRole.PROVIDER:
+        raise HTTPException(status_code=400, detail="This material isn't available from the selected shop.")
 
     if payload.requested_deadline and payload.requested_deadline < date.today():
         raise HTTPException(status_code=400, detail="Requested deadline must be on or after today.")
@@ -76,21 +79,23 @@ def create_thoub_order(
     db.refresh(new_order)
     return new_order
 
-@router.get("/my-orders")
+@router.get("/my-orders", response_model=list[ThoubOrderSchema])
 def get_my_orders(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
     """List all orders for the logged-in client or tailor."""
     if current_user.role == UserRole.CLIENT:
-        return db.query(ThoubOrderModel).filter_by(client_id=current_user.id).all()
+        query = db.query(ThoubOrderModel).filter_by(client_id=current_user.id)
     elif current_user.role == UserRole.TAILOR:
-        return db.query(ThoubOrderModel).filter_by(tailor_id=current_user.id).all()
+        query = db.query(ThoubOrderModel).filter_by(tailor_id=current_user.id)
     else:
         raise HTTPException(status_code=403, detail="Unauthorized access to orders.")
 
+    return query.order_by(ThoubOrderModel.created_at.desc()).all()
 
-@router.get("/{order_id}")
+
+@router.get("/{order_id}", response_model=ThoubOrderSchema)
 def get_thoub_order_by_id(
     order_id: int,
     db: Session = Depends(get_db),
@@ -101,15 +106,14 @@ def get_thoub_order_by_id(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
-    if current_user.role == UserRole.CLIENT and order.client_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied.")
-    if current_user.role == UserRole.TAILOR and order.tailor_id != current_user.id:
+    is_involved = current_user.id in (order.client_id, order.tailor_id)
+    if not is_involved and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Access denied.")
 
     return order
 
 
-@router.put("/{order_id}")
+@router.put("/{order_id}", response_model=ThoubOrderSchema)
 def edit_thoub_order(
     order_id: int,
     payload: ThoubOrderUpdateSchema,
@@ -132,6 +136,8 @@ def edit_thoub_order(
         material = db.query(MaterialModel).filter_by(id=payload.material_id).first()
         if not material or material.is_deleted or not material.is_available:
             raise HTTPException(status_code=400, detail="Selected material is unavailable or deleted.")
+        if material.source_id != order.tailor_id and material.source.role != UserRole.PROVIDER:
+            raise HTTPException(status_code=400, detail="This material isn't available from the selected shop.")
         order.material_id = payload.material_id
 
     if payload.material_amount is not None:
@@ -147,7 +153,7 @@ def edit_thoub_order(
 
     db.commit()
     db.refresh(order)
-    return {"message": "Order updated successfully", "order": order}
+    return order
 
 
 @router.delete("/{order_id}", status_code=status.HTTP_200_OK)
@@ -172,7 +178,7 @@ def delete_thoub_order(
     return {"message": "Order deleted successfully"}
 
 
-@router.patch("/{order_id}/tailor-accept")
+@router.patch("/{order_id}/tailor-accept", response_model=ThoubOrderSchema)
 def tailor_accept_order(
     order_id: int,
     payload: TailorAcceptSchema,
@@ -207,10 +213,10 @@ def tailor_accept_order(
 
     db.commit()
     db.refresh(order)
-    return {"message": "Order accepted successfully", "order": order}
+    return order
 
 
-@router.patch("/{order_id}/tailor-reject")
+@router.patch("/{order_id}/tailor-reject", response_model=ThoubOrderSchema)
 def tailor_reject_order(
     order_id: int,
     db: Session = Depends(get_db),
@@ -230,10 +236,10 @@ def tailor_reject_order(
     order.status = OrderStatus.TAILOR_REJECTED
     db.commit()
     db.refresh(order)
-    return {"message": "Order rejected by tailor", "order": order}
+    return order
 
 
-@router.patch("/{order_id}/client-respond")
+@router.patch("/{order_id}/client-respond", response_model=ThoubOrderSchema)
 def client_respond_order(
     order_id: int,
     payload: ClientRespondSchema,
@@ -253,23 +259,16 @@ def client_respond_order(
 
     if payload.approve:
         order.status = OrderStatus.CONFIRMED
-        
-        # Use existing helper to create material order for external provider materials
-        if order.material.source_id != order.tailor_id:
-            try:
-                create_material_order(order, db)
-            except Exception as e:
-                # Fallback/catch if helper expects specific arguments or raises constraint errors
-                pass
+        create_material_order(order, db)
     else:
         order.status = OrderStatus.CLIENT_REJECTED
 
     db.commit()
     db.refresh(order)
-    return {"message": f"Order status updated to {order.status}", "order": order}
+    return order
 
 
-@router.patch("/{order_id}/in-progress")
+@router.patch("/{order_id}/in-progress", response_model=ThoubOrderSchema)
 def mark_order_in_progress(
     order_id: int,
     db: Session = Depends(get_db),
@@ -293,10 +292,10 @@ def mark_order_in_progress(
     order.status = OrderStatus.IN_PROGRESS
     db.commit()
     db.refresh(order)
-    return {"message": "Order moved to in_progress", "order": order}
+    return order
 
 
-@router.patch("/{order_id}/ready")
+@router.patch("/{order_id}/ready", response_model=ThoubOrderSchema)
 def mark_order_ready(
     order_id: int,
     db: Session = Depends(get_db),
@@ -316,10 +315,10 @@ def mark_order_ready(
     order.status = OrderStatus.READY
     db.commit()
     db.refresh(order)
-    return {"message": "Order marked as ready", "order": order}
+    return order
 
 
-@router.patch("/{order_id}/on-the-way")
+@router.patch("/{order_id}/on-the-way", response_model=ThoubOrderSchema)
 def mark_order_on_the_way(
     order_id: int,
     db: Session = Depends(get_db),
@@ -339,10 +338,10 @@ def mark_order_on_the_way(
     order.status = OrderStatus.ON_THE_WAY
     db.commit()
     db.refresh(order)
-    return {"message": "Order marked as on the way", "order": order}
+    return order
 
 
-@router.patch("/{order_id}/delivered")
+@router.patch("/{order_id}/delivered", response_model=ThoubOrderSchema)
 def mark_order_delivered(
     order_id: int,
     db: Session = Depends(get_db),
@@ -362,4 +361,4 @@ def mark_order_delivered(
     order.status = OrderStatus.DELIVERED
     db.commit()
     db.refresh(order)
-    return {"message": "Order successfully marked as delivered", "order": order}
+    return order

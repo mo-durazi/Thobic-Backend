@@ -68,8 +68,7 @@ def get_shop_profile(
 
     profile = db.query(ProfileModel).filter_by(user_id=tailor.id).first()
 
-    # Query materials directly using source_id to avoid missing relationship bugs
-    materials_query = db.query(MaterialModel).filter_by(source_id=tailor.id, is_deleted=False).all()
+    materials_query = db.query(MaterialModel).filter_by(source_id=tailor.id, is_deleted=False, is_available=True).all()
 
     materials = [
         {

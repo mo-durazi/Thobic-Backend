@@ -10,8 +10,3 @@ load_dotenv(dotenv_path=env_path)
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 JWT_SECRET = os.getenv('JWT_SECRET')
-
-print("--- DEBUG START ---")
-print("Looking for .env at:", env_path)
-print("DATABASE_URL IS:", DATABASE_URL)
-print("--- DEBUG END ---")
