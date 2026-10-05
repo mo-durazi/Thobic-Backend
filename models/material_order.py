@@ -56,7 +56,7 @@ class MaterialOrderModel(BaseModel):
         SQLEnum(
             MaterialOrderStatus,
             name="material_order_status",
-            value_callable=lambda e: [m.value for m in e]
+            values_callable=lambda e: [m.value for m in e]
         ),
         nullable=False,
         default=MaterialOrderStatus.PENDING,

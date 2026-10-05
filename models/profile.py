@@ -27,7 +27,7 @@ class ProfileModel(BaseModel):
         SQLEnum(
             ShopStatus,
             name="shop_status",
-            value_callable=lambda e: [m.value for m in e]
+            values_callable=lambda e: [m.value for m in e]
         ),
         nullable=True
     )
