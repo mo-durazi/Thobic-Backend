@@ -101,3 +101,4 @@ def get_shop_profile(
         "phone_number": profile.phone_number if profile else None,
         "materials": materials
     }
+    
