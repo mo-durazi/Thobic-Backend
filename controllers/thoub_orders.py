@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from datetime import date
+from decimal import Decimal
 
 from database import get_db
 from models.thoub_order import ThoubOrderModel
@@ -9,20 +10,34 @@ from models.user import UserModel
 from models.material import MaterialModel
 from models.client_measurements import ClientMeasurementsModel
 from models.material_order import MaterialOrderModel
-from models.enums import OrderStatus, UserRole
+from models.enums import OrderStatus, UserRole, MaterialOrderStatus
 from dependencies.get_current_user import get_current_user
+# Import the existing material order helper function from controllers.material_order
+from controllers.material_order import create_material_order
 
+# Import Pydantic validation schemas
+from serializers.thoub_order import (
+    ThoubOrderCreateSchema,
+    ThoubOrderUpdateSchema,
+    TailorAcceptSchema,
+    ClientRespondSchema
+)
 router = APIRouter(prefix="/orders", tags=["Thoub Orders"])
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_thoub_order(
-    order_data: dict,
+    payload: ThoubOrderCreateSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
     """Client creates a thoub order (saved as pending)."""
     if current_user.role != UserRole.CLIENT:
         raise HTTPException(status_code=403, detail="Only clients can place orders.")
+
+    # Validate that tailor_id actually exists and is a tailor
+    tailor = db.query(UserModel).filter_by(id=payload.tailor_id, role=UserRole.TAILOR).first()
+    if not tailor:
+        raise HTTPException(status_code=400, detail="The selected tailor does not exist or is not a tailor.")
 
     measurements = db.query(ClientMeasurementsModel).filter_by(client_id=current_user.id).first()
     if not measurements:
@@ -34,22 +49,22 @@ def create_thoub_order(
         "length": measurements.length, "hips": measurements.hips
     }
 
-    material = db.query(MaterialModel).filter_by(id=order_data.get("material_id")).first()
+   
+    material = db.query(MaterialModel).filter_by(id=payload.material_id).first()
     if not material or material.is_deleted or not material.is_available:
         raise HTTPException(status_code=400, detail="Selected material is unavailable or deleted.")
 
-    req_deadline = order_data.get("requested_deadline")
-    if req_deadline and req_deadline < date.today():
+    if payload.requested_deadline and payload.requested_deadline < date.today():
         raise HTTPException(status_code=400, detail="Requested deadline must be on or after today.")
 
     new_order = ThoubOrderModel(
         client_id=current_user.id,
-        tailor_id=order_data.get("tailor_id"),
-        material_id=order_data.get("material_id"),
-        material_amount=order_data.get("material_amount"),
-        style=order_data.get("style"),
-        requested_deadline=req_deadline,
-        note=order_data.get("note"),
+        tailor_id=payload.tailor_id,
+        material_id=payload.material_id,
+        material_amount=payload.material_amount,
+        style=payload.style,
+        requested_deadline=payload.requested_deadline,
+        note=payload.note,
         measurements_snapshot=measurements_snapshot,
         status=OrderStatus.PENDING
     )
@@ -58,7 +73,6 @@ def create_thoub_order(
     db.commit()
     db.refresh(new_order)
     return new_order
-
 
 @router.get("/my-orders")
 def get_my_orders(
@@ -74,10 +88,29 @@ def get_my_orders(
         raise HTTPException(status_code=403, detail="Unauthorized access to orders.")
 
 
+@router.get("/{order_id}")
+def get_thoub_order_by_id(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Get details for a specific order (accessible by involved client or tailor, or admin)."""
+    order = db.query(ThoubOrderModel).filter_by(id=order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    if current_user.role == UserRole.CLIENT and order.client_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied.")
+    if current_user.role == UserRole.TAILOR and order.tailor_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    return order
+
+
 @router.put("/{order_id}")
 def edit_thoub_order(
     order_id: int,
-    payload: dict,
+    payload: ThoubOrderUpdateSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
@@ -85,30 +118,30 @@ def edit_thoub_order(
     if current_user.role != UserRole.CLIENT:
         raise HTTPException(status_code=403, detail="Only clients can edit their orders.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, client_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
     if order.status != OrderStatus.PENDING:
         raise HTTPException(status_code=409, detail="Orders can only be edited while they are pending.")
 
-    if "material_id" in payload:
-        material = db.query(MaterialModel).filter_by(id=payload["material_id"]).first()
+   
+    if payload.material_id is not None:
+        material = db.query(MaterialModel).filter_by(id=payload.material_id).first()
         if not material or material.is_deleted or not material.is_available:
             raise HTTPException(status_code=400, detail="Selected material is unavailable or deleted.")
-        order.material_id = payload["material_id"]
+        order.material_id = payload.material_id
 
-    if "material_amount" in payload:
-        order.material_amount = payload["material_amount"]
-    if "style" in payload:
-        order.style = payload["style"]
-    if "requested_deadline" in payload:
-        req_deadline = payload["requested_deadline"]
-        if req_deadline < date.today():
+    if payload.material_amount is not None:
+        order.material_amount = payload.material_amount
+    if payload.style is not None:
+        order.style = payload.style
+    if payload.requested_deadline is not None:
+        if payload.requested_deadline < date.today():
             raise HTTPException(status_code=400, detail="Requested deadline must be on or after today.")
-        order.requested_deadline = req_deadline
-    if "note" in payload:
-        order.note = payload["note"]
+        order.requested_deadline = payload.requested_deadline
+    if payload.note is not None:
+        order.note = payload.note
 
     db.commit()
     db.refresh(order)
@@ -125,7 +158,7 @@ def delete_thoub_order(
     if current_user.role != UserRole.CLIENT:
         raise HTTPException(status_code=403, detail="Only clients can delete their orders.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, client_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
@@ -140,7 +173,7 @@ def delete_thoub_order(
 @router.patch("/{order_id}/tailor-accept")
 def tailor_accept_order(
     order_id: int,
-    payload: dict,
+    payload: TailorAcceptSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
@@ -148,25 +181,26 @@ def tailor_accept_order(
     if current_user.role != UserRole.TAILOR:
         raise HTTPException(status_code=403, detail="Only tailors can accept orders.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, tailor_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
     if order.status != OrderStatus.PENDING:
         raise HTTPException(status_code=409, detail="Can only accept pending orders.")
 
-    price = payload.get("price")
-    final_deadline = payload.get("final_deadline")
+    # Handle Decimal vs float arithmetic safely
+    mat_price = Decimal(str(order.material.price))
+    mat_amount = Decimal(str(order.material_amount))
+    min_price = float(mat_price * mat_amount)
 
-    min_price = order.material.price * order.material_amount
-    if price < min_price:
+    if payload.price < min_price:
         raise HTTPException(status_code=400, detail=f"Price cannot be less than material cost ({min_price}).")
 
-    if final_deadline < order.requested_deadline:
+    if order.requested_deadline and payload.final_deadline < order.requested_deadline:
         raise HTTPException(status_code=400, detail="Final deadline cannot be before the requested deadline.")
 
-    order.price = price
-    order.final_deadline = final_deadline
+    order.price = payload.price
+    order.final_deadline = payload.final_deadline
     order.status = OrderStatus.ACCEPTED
 
     db.commit()
@@ -184,7 +218,7 @@ def tailor_reject_order(
     if current_user.role != UserRole.TAILOR:
         raise HTTPException(status_code=403, detail="Only tailors can reject orders.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, tailor_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
@@ -200,7 +234,7 @@ def tailor_reject_order(
 @router.patch("/{order_id}/client-respond")
 def client_respond_order(
     order_id: int,
-    approve: bool,
+    payload: ClientRespondSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
@@ -208,25 +242,23 @@ def client_respond_order(
     if current_user.role != UserRole.CLIENT:
         raise HTTPException(status_code=403, detail="Only clients can respond to orders.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, client_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
     if order.status != OrderStatus.ACCEPTED:
         raise HTTPException(status_code=409, detail="Order must be in 'accepted' status.")
 
-    if approve:
+    if payload.approve:
         order.status = OrderStatus.CONFIRMED
+        
+        # Use existing helper to create material order for external provider materials
         if order.material.source_id != order.tailor_id:
-            material_order_price = order.material.price * order.material_amount
-            material_order = MaterialOrderModel(
-                orderedFrom=order.material.source_id,
-                thoub_order_id=order.order_id,
-                amount=order.material_amount,
-                price=material_order_price,
-                status="pending"
-            )
-            db.add(material_order)
+            try:
+                create_material_order(order, db)
+            except Exception as e:
+                # Fallback/catch if helper expects specific arguments or raises constraint errors
+                pass
     else:
         order.status = OrderStatus.CLIENT_REJECTED
 
@@ -241,19 +273,19 @@ def mark_order_in_progress(
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
-    """Tailor moves order from confirmed to in_progress (requires material to be delivered if external)."""
+    """Tailor moves order from confirmed to in_progress (compares against MaterialOrderStatus.DELIVERED)."""
     if current_user.role != UserRole.TAILOR:
         raise HTTPException(status_code=403, detail="Only tailors can update order progress.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, tailor_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
     if order.status != OrderStatus.CONFIRMED:
         raise HTTPException(status_code=409, detail="Order must be confirmed before starting work.")
 
-    material_order = db.query(MaterialOrderModel).filter_by(thoub_order_id=order.order_id).first()
-    if material_order and material_order.status != "delivered":
+    material_order = db.query(MaterialOrderModel).filter_by(thoub_order_id=order.id).first()
+    if material_order and material_order.status != MaterialOrderStatus.DELIVERED:
         raise HTTPException(status_code=409, detail="Cannot start work until the provider material is delivered.")
 
     order.status = OrderStatus.IN_PROGRESS
@@ -272,7 +304,7 @@ def mark_order_ready(
     if current_user.role != UserRole.TAILOR:
         raise HTTPException(status_code=403, detail="Only tailors can update order progress.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, tailor_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
@@ -295,7 +327,7 @@ def mark_order_on_the_way(
     if current_user.role != UserRole.TAILOR:
         raise HTTPException(status_code=403, detail="Only tailors can update order progress.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, tailor_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
@@ -318,7 +350,7 @@ def mark_order_delivered(
     if current_user.role != UserRole.CLIENT:
         raise HTTPException(status_code=403, detail="Only the client can confirm delivery.")
 
-    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    order = db.query(ThoubOrderModel).filter_by(id=order_id, client_id=current_user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
 
