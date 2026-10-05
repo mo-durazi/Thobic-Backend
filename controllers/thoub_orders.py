@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from datetime import date
+from decimal import Decimal
 
 from database import get_db
 from models.thoub_order import ThoubOrderModel
@@ -9,20 +10,34 @@ from models.user import UserModel
 from models.material import MaterialModel
 from models.client_measurements import ClientMeasurementsModel
 from models.material_order import MaterialOrderModel
-from models.enums import OrderStatus, UserRole
+from models.enums import OrderStatus, UserRole, MaterialOrderStatus
 from dependencies.get_current_user import get_current_user
+# Import the existing material order helper function from controllers.material_order
+from controllers.material_order import create_material_order
 
+# Import Pydantic validation schemas
+from serializers.thoub_order import (
+    ThoubOrderCreateSchema,
+    ThoubOrderUpdateSchema,
+    TailorAcceptSchema,
+    ClientRespondSchema
+)
 router = APIRouter(prefix="/orders", tags=["Thoub Orders"])
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_thoub_order(
-    order_data: dict,
+    payload: ThoubOrderCreateSchema,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
     """Client creates a thoub order (saved as pending)."""
     if current_user.role != UserRole.CLIENT:
         raise HTTPException(status_code=403, detail="Only clients can place orders.")
+
+    # Validate that tailor_id actually exists and is a tailor
+    tailor = db.query(UserModel).filter_by(id=payload.tailor_id, role=UserRole.TAILOR).first()
+    if not tailor:
+        raise HTTPException(status_code=400, detail="The selected tailor does not exist or is not a tailor.")
 
     measurements = db.query(ClientMeasurementsModel).filter_by(client_id=current_user.id).first()
     if not measurements:
@@ -34,22 +49,22 @@ def create_thoub_order(
         "length": measurements.length, "hips": measurements.hips
     }
 
-    material = db.query(MaterialModel).filter_by(id=order_data.get("material_id")).first()
+   
+    material = db.query(MaterialModel).filter_by(id=payload.material_id).first()
     if not material or material.is_deleted or not material.is_available:
         raise HTTPException(status_code=400, detail="Selected material is unavailable or deleted.")
 
-    req_deadline = order_data.get("requested_deadline")
-    if req_deadline and req_deadline < date.today():
+    if payload.requested_deadline and payload.requested_deadline < date.today():
         raise HTTPException(status_code=400, detail="Requested deadline must be on or after today.")
 
     new_order = ThoubOrderModel(
         client_id=current_user.id,
-        tailor_id=order_data.get("tailor_id"),
-        material_id=order_data.get("material_id"),
-        material_amount=order_data.get("material_amount"),
-        style=order_data.get("style"),
-        requested_deadline=req_deadline,
-        note=order_data.get("note"),
+        tailor_id=payload.tailor_id,
+        material_id=payload.material_id,
+        material_amount=payload.material_amount,
+        style=payload.style,
+        requested_deadline=payload.requested_deadline,
+        note=payload.note,
         measurements_snapshot=measurements_snapshot,
         status=OrderStatus.PENDING
     )
@@ -58,7 +73,6 @@ def create_thoub_order(
     db.commit()
     db.refresh(new_order)
     return new_order
-
 
 @router.get("/my-orders")
 def get_my_orders(
