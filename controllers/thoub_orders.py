@@ -1,0 +1,170 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List
+from datetime import date
+
+from database import get_db
+from models.thoub_order import ThoubOrderModel
+from models.user import UserModel
+from models.material import MaterialModel
+from models.client_measurements import ClientMeasurementsModel
+from models.material_order import MaterialOrderModel
+from models.enums import OrderStatus, UserRole
+from dependencies.get_current_user import get_current_user
+
+
+router = APIRouter(prefix="/orders", tags=["Thoub Orders"])
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+def create_thoub_order(
+    order_data: dict, 
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Client creates a thoub order (saved as pending).
+    Automatically takes a snapshot of the client's current measurements.
+    """
+    if current_user.role != UserRole.CLIENT:
+        raise HTTPException(status_code=403, detail="Only clients can place orders.")
+
+    #Fetch client measurements for snapshot
+    measurements = db.query(ClientMeasurementsModel).filter_by(client_id=current_user.id).first()
+    if not measurements:
+        raise HTTPException(status_code=400, detail="Please add your measurements before placing an order.")
+
+    measurements_snapshot = {
+        "neck": measurements.neck,
+        "chest": measurements.chest,
+        "arm": measurements.arm,
+        "shoulders": measurements.shoulders,
+        "waist": measurements.waist,
+        "wrist": measurements.wrist,
+        "length": measurements.length,
+        "hips": measurements.hips
+    }
+
+    #Check material availability & status rules
+    material = db.query(MaterialModel).filter_by(id=order_data.get("material_id")).first()
+    if not material or material.is_deleted or not material.is_available:
+        raise HTTPException(status_code=400, detail="Selected material is unavailable or deleted.")
+
+    #Check requested deadline constraint (must be on or after creation date)
+    req_deadline = order_data.get("requested_deadline")
+    if req_deadline and req_deadline < date.today():
+        raise HTTPException(status_code=400, detail="Requested deadline must be on or after today.")
+
+    #Create the Thoub Order
+    new_order = ThoubOrderModel(
+        client_id=current_user.id,
+        tailor_id=order_data.get("tailor_id"),
+        material_id=order_data.get("material_id"),
+        material_amount=order_data.get("material_amount"),
+        style=order_data.get("style"),
+        requested_deadline=req_deadline,
+        note=order_data.get("note"),
+        measurements_snapshot=measurements_snapshot,
+        status=OrderStatus.PENDING
+    )
+
+    db.add(new_order)
+    db.commit()
+    db.refresh(new_order)
+    return new_order
+
+@router.get("/my-orders", response_model=List[dict])
+def get_my_orders(
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """List all orders for the logged-in client or tailor."""
+    if current_user.role == UserRole.CLIENT:
+        orders = db.query(ThoubOrderModel).filter_by(client_id=current_user.id).all()
+    elif current_user.role == UserRole.TAILOR:
+        orders = db.query(ThoubOrderModel).filter_by(tailor_id=current_user.id).all()
+    else:
+        raise HTTPException(status_code=403, detail="Unauthorized access to orders.")
+    return orders
+
+
+@router.patch("/{order_id}/tailor-accept")
+def tailor_accept_order(
+    order_id: int,
+    payload: dict, # Contains price and final_deadline
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Tailor accepts an order, sets price and final deadline.
+    Constraint: Price cannot be less than material price * material amount.
+    """
+    if current_user.role != UserRole.TAILOR:
+        raise HTTPException(status_code=403, detail="Only tailors can accept orders.")
+
+    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    if order.status != OrderStatus.PENDING:
+        raise HTTPException(status_code=409, detail="Can only accept pending orders.")
+
+    price = payload.get("price")
+    final_deadline = payload.get("final_deadline")
+
+    # Constraint Check: Price ≥ material price * material amount
+    min_price = order.material.price * order.material_amount
+    if price < min_price:
+        raise HTTPException(status_code=400, detail=f"Price cannot be less than material cost ({min_price}).")
+
+    # Constraint Check: Final deadline cannot be before requested deadline
+    if final_deadline < order.requested_deadline:
+        raise HTTPException(status_code=400, detail="Final deadline cannot be before the requested deadline.")
+
+    order.price = price
+    order.final_deadline = final_deadline
+    order.status = OrderStatus.ACCEPTED
+
+    db.commit()
+    db.refresh(order)
+    return {"message": "Order accepted successfully", "order": order}
+
+
+
+@router.patch("/{order_id}/client-respond")
+def client_respond_order(
+    order_id: int,
+    approve: bool,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Client approves (confirmed) or declines (client_rejected) an accepted order."""
+    if current_user.role != UserRole.CLIENT:
+        raise HTTPException(status_code=403, detail="Only clients can respond to order updates.")
+
+    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, client_id=current_user.id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    if order.status != OrderStatus.ACCEPTED:
+        raise HTTPException(status_code=409, detail="Order must be in 'accepted' status to respond.")
+
+    if approve:
+        order.status = OrderStatus.CONFIRMED
+
+        # Check if material is from an external provider Create Material Order automatically
+        if order.material.source_id != order.tailor_id:
+            material_order_price = order.material.price * order.material_amount
+            material_order = MaterialOrderModel(
+                orderedFrom=order.material.source_id,
+                thoub_order_id=order.order_id,
+                amount=order.material_amount,
+                price=material_order_price,
+                status="pending"
+            )
+            db.add(material_order)
+    else:
+        order.status = OrderStatus.CLIENT_REJECTED
+
+    db.commit()
+    db.refresh(order)
+    return {"message": f"Order status updated to {order.status}", "order": order}
