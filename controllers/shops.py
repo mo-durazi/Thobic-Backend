@@ -54,3 +54,51 @@ def get_shops(
         })
 
     return shops_list
+
+
+    @router.get("/{shop_id}")
+def get_shop_profile(
+    shop_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Shop Profile page: Show specific shop details and in-stock materials to start an order.
+    """
+    tailor = db.query(UserModel).filter(UserModel.id == shop_id, UserModel.role == UserRole.TAILOR).first()
+    
+    if not tailor:
+        raise HTTPException(status_code=404, detail="Tailoring shop not found.")
+
+    profile = db.query(ProfileModel).filter_by(user_id=tailor.id).first()
+
+    # Fetch materials belonging to this tailor shop
+    materials = [
+        {
+            "id": mat.id,
+            "name": mat.name,
+            "price": mat.price,
+            "colour": mat.colour,
+            "texture": mat.texture,
+            "pattern": mat.pattern,
+            "season": mat.season,
+            "stand": mat.stand,
+            "is_available": mat.is_available,
+            "image_url": mat.image_url
+        }
+        for mat in tailor.materials if not mat.is_deleted # assuming 'materials' relationship exists
+    ] if hasattr(tailor, "materials") else []
+
+    return {
+        "id": tailor.id,
+        "username": tailor.username,
+        "display_name": profile.display_name if profile else "Unknown Shop",
+        "branch": profile.branch if profile else None,
+        "status": profile.status if profile else None,
+        "address": {
+            "road_no": profile.road_no if profile else None,
+            "block_no": profile.block_no if profile else None,
+            "building_no": profile.building_no if profile else None,
+        },
+        "phone_number": profile.phone_number if profile else None,
+        "materials": materials
+    }
