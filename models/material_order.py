@@ -5,7 +5,7 @@ from sqlalchemy import (
     String,
     Enum as SQLEnum,
     ForeignKey,
-    DateTime,
+    Date,
 )
 from sqlalchemy.orm import relationship
 
@@ -47,10 +47,8 @@ class MaterialOrderModel(BaseModel):
 
     price = Column(Float, nullable=False)
 
-    expected_delivery_date = Column(
-        DateTime(timezone=True),
-        nullable=False
-    )
+    # Set by the provider when accepting the order
+    expected_delivery_date = Column(Date, nullable=True)
 
     status = Column(
         SQLEnum(
