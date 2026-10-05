@@ -87,8 +87,46 @@ def get_my_orders(
     return orders
 
 
+@router.patch("/{order_id}/tailor-accept")
+def tailor_accept_order(
+    order_id: int,
+    payload: dict, # Contains price and final_deadline
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Tailor accepts an order, sets price and final deadline.
+    Constraint: Price cannot be less than material price * material amount.
+    """
+    if current_user.role != UserRole.TAILOR:
+        raise HTTPException(status_code=403, detail="Only tailors can accept orders.")
 
+    order = db.query(ThoubOrderModel).filter_by(order_id=order_id, tailor_id=current_user.id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
 
-db.commit()
+    if order.status != OrderStatus.PENDING:
+        raise HTTPException(status_code=409, detail="Can only accept pending orders.")
+
+    price = payload.get("price")
+    final_deadline = payload.get("final_deadline")
+
+    # Constraint Check: Price ≥ material price * material amount
+    min_price = order.material.price * order.material_amount
+    if price < min_price:
+        raise HTTPException(status_code=400, detail=f"Price cannot be less than material cost ({min_price}).")
+
+    # Constraint Check: Final deadline cannot be before requested deadline
+    if final_deadline < order.requested_deadline:
+        raise HTTPException(status_code=400, detail="Final deadline cannot be before the requested deadline.")
+
+    order.price = price
+    order.final_deadline = final_deadline
+    order.status = OrderStatus.ACCEPTED
+
+    db.commit()
     db.refresh(order)
-    return {"message": f"Order status updated to {order.status}", "order": order}
+    return {"message": "Order accepted successfully", "order": order}
+
+
+
