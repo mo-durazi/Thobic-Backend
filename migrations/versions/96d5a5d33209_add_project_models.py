@@ -136,4 +136,6 @@ def downgrade() -> None:
     op.drop_table('materials')
     op.drop_index(op.f('ix_client_measurements_id'), table_name='client_measurements')
     op.drop_table('client_measurements')
+    for t in ("material_order_status", "order_status", "shop_status", "material_texture", "material_pattern", "material_season", "material_stand"):
+        op.execute(f"DROP TYPE IF EXISTS {t}")
     # ### end Alembic commands ###
