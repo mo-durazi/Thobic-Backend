@@ -19,11 +19,6 @@ router = APIRouter()
 
 
 def create_material_order(thoub_order: ThoubOrderModel, db: Session):
-    """Called by the thoub order controller when the client confirms an order.
-
-    Creates a pending material order if the thoub order uses a provider material.
-    Does not commit, so the caller can commit it together with the confirm.
-    """
     material = thoub_order.material
 
     if material.source.role != UserRole.PROVIDER:
