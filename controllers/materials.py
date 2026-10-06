@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
@@ -20,8 +20,28 @@ from serializers.material import (
     MaterialCreateSchema,
     MaterialUpdateSchema,
 )
+from services.cloudinary_service import upload_image
+
 
 router = APIRouter()
+
+
+@router.post("/materials/upload-image")
+def upload_material_image(
+    image: UploadFile = File(...),
+    current_user: UserModel = Depends(require_role("tailor", "provider")),
+):
+    if not image.content_type or not image.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only image files are allowed",
+        )
+
+    image_url = upload_image(image.file)
+
+    return {
+        "image_url": image_url,
+    }
 
 
 @router.post(
@@ -83,7 +103,9 @@ def get_materials(
 
     # P07 provider materials: ?source_role=provider
     if source_role is not None:
-        query = query.join(MaterialModel.source).filter(UserModel.role == source_role)
+        query = query.join(MaterialModel.source).filter(
+            UserModel.role == source_role
+        )
 
     if texture is not None:
         query = query.filter(MaterialModel.texture == texture)
