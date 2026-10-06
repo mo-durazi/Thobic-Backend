@@ -61,3 +61,18 @@ class ThoubOrderModel(BaseModel):
     )
 
     material = relationship("MaterialModel")
+
+    @property
+    def tailor_name(self):
+        # to display the shop name on the order pages
+        if not self.tailor:
+            return None
+        if self.tailor.profile:
+            return self.tailor.profile.display_name
+        return self.tailor.username
+
+    @property
+    def material_name(self):
+        if self.material:
+            return self.material.name
+        return None

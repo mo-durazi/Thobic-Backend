@@ -41,6 +41,8 @@ class ThoubOrderSchema(BaseModel):
     final_deadline: Optional[date] = None
     note: Optional[str] = None
     created_at: Optional[datetime] = None
+    tailor_name: Optional[str] = None
+    material_name: Optional[str] = None
 
     class Config:
         from_attributes = True
