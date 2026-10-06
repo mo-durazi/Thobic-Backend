@@ -29,4 +29,6 @@ archive.zip
 # macOS
 .DS_Store
 
-.codspeed
+.codspeednode_modules/
+package.json
+package-lock.json
