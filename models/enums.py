@@ -62,3 +62,44 @@ class MaterialOrderStatus(enum.Enum):
     REJECTED = "rejected"
     ON_THE_WAY = "on_the_way"
     DELIVERED = "delivered"
+
+
+class ThoubNationality(str, enum.Enum):
+    EMIRATI = "Emirati"
+    SAUDI = "Saudi"
+    BAHRAINI = "Bahraini"
+    KUWAITI = "Kuwaiti"
+    QATARI = "Qatari"
+
+
+class ThoubCollar(str, enum.Enum):
+    NORMAL = "Normal"
+    CHINESE = "Chinese"
+    V_SHAPE = "V-shape"
+    V2_SHAPE = "V2-shape"
+    STICKS_SHAPE = "sticks-shape"
+
+
+class ThoubPlacket(str, enum.Enum):
+    HIDDEN = "Hidden"
+    HIDDEN_V = "hidden-v"
+    NORMAL = "Normal"
+    NORMAL_V = "Normal-v"
+    ZIPPER = "zipper"
+
+
+class ThoubChestPocket(str, enum.Enum):
+    SHAPE1 = "shape1"
+    SHAPE2 = "shape2"
+    SHAPE3 = "shape3"
+    SHAPE4 = "shape4"
+
+
+class ThoubSidePocket(str, enum.Enum):
+    DOUBLE = "Double"
+    SIGLE = "sigle"
+
+
+class ThoubSleeves(str, enum.Enum):
+    NORMAL = "Normal"
+    CUFF_WITH_BUTTONS = "Cuff with buttons"

@@ -3,19 +3,38 @@ from pydantic import BaseModel, Field
 from datetime import date, datetime
 from typing import Optional, Dict, Any
 from models.enums import OrderStatus
+from models.enums import (
+    ThoubNationality,
+    ThoubCollar,
+    ThoubPlacket,
+    ThoubChestPocket,
+    ThoubSidePocket,
+    ThoubSleeves,
+)
+
+
+class ThoubStyleSchema(BaseModel):
+    """Validated style options stored as a JSON object on each order."""
+
+    nationalti: ThoubNationality
+    collar: ThoubCollar
+    placket: ThoubPlacket
+    chestPocket: ThoubChestPocket
+    sidePockect: ThoubSidePocket
+    Sleeves: ThoubSleeves
 
 class ThoubOrderCreateSchema(BaseModel):
     tailor_id: int
     material_id: int
     material_amount: float = Field(gt=0)
-    style: Dict[str, Any]
+    style: ThoubStyleSchema
     requested_deadline: Optional[date] = None
     note: Optional[str] = None
 
 class ThoubOrderUpdateSchema(BaseModel):
     material_id: Optional[int] = None
     material_amount: Optional[float] = Field(default=None, gt=0)
-    style: Optional[Dict[str, Any]] = None
+    style: Optional[ThoubStyleSchema] = None
     requested_deadline: Optional[date] = None
     note: Optional[str] = None
 
@@ -35,7 +54,7 @@ class ThoubOrderSchema(BaseModel):
     material_amount: float
     price: Optional[float] = None
     measurements_snapshot: Dict[str, Any]
-    style: Dict[str, Any]
+    style: ThoubStyleSchema
     status: OrderStatus
     requested_deadline: Optional[date] = None
     final_deadline: Optional[date] = None

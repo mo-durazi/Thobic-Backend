@@ -67,7 +67,7 @@ def create_thoub_order(
         tailor_id=payload.tailor_id,
         material_id=payload.material_id,
         material_amount=payload.material_amount,
-        style=payload.style,
+        style=payload.style.model_dump(mode="json"),
         requested_deadline=payload.requested_deadline,
         note=payload.note,
         measurements_snapshot=measurements_snapshot,
@@ -143,7 +143,7 @@ def edit_thoub_order(
     if payload.material_amount is not None:
         order.material_amount = payload.material_amount
     if payload.style is not None:
-        order.style = payload.style
+        order.style = payload.style.model_dump(mode="json")
     if payload.requested_deadline is not None:
         if payload.requested_deadline < date.today():
             raise HTTPException(status_code=400, detail="Requested deadline must be on or after today.")
