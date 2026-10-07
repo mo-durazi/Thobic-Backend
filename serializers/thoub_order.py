@@ -43,6 +43,8 @@ class ThoubOrderSchema(BaseModel):
     created_at: Optional[datetime] = None
     tailor_name: Optional[str] = None
     material_name: Optional[str] = None
+    material_order_status: Optional[str] = None
+    expected_material_delivery_date: Optional[date] = None
 
     class Config:
         from_attributes = True

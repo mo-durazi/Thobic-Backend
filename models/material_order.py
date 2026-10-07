@@ -7,7 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Date,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 from .base import BaseModel
 from models.enums import MaterialOrderStatus
@@ -77,10 +77,34 @@ class MaterialOrderModel(BaseModel):
 
     thoub_order = relationship(
         "ThoubOrderModel",
-        foreign_keys=[thoub_order_id]
+        foreign_keys=[thoub_order_id],
+        backref=backref("material_order", uselist=False)
     )
 
     material = relationship(
         "MaterialModel",
         foreign_keys=[material_id]
     )
+
+    @property
+    def tailor_name(self):
+        if not self.thoub_order or not self.thoub_order.tailor:
+            return None
+        tailor = self.thoub_order.tailor
+        if tailor.profile:
+            return tailor.profile.display_name
+        return tailor.username
+
+    @property
+    def provider_name(self):
+        if not self.provider:
+            return None
+        if self.provider.profile:
+            return self.provider.profile.display_name
+        return self.provider.username
+
+    @property
+    def material_name(self):
+        if not self.material:
+            return None
+        return self.material.name

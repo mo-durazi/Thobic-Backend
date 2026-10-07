@@ -14,8 +14,8 @@ pyjwt = "*"
 alembic = "*"
 python-dotenv = "*"
 sqlalchemy = "*"
-cloudinary = "*"
 python-multipart = "*"
+cloudinary = "*"
 
 [dev-packages]
 pytest = "*"

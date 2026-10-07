@@ -27,6 +27,9 @@ class MaterialOrderSchema(BaseModel):
     notes: Optional[str] = None
     rejection_reason: Optional[str] = None
     created_at: Optional[datetime] = None
+    tailor_name: Optional[str] = None
+    provider_name: Optional[str] = None
+    material_name: Optional[str] = None
 
     class Config:
         from_attributes = True
