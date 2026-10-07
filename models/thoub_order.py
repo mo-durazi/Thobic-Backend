@@ -76,3 +76,15 @@ class ThoubOrderModel(BaseModel):
         if self.material:
             return self.material.name
         return None
+
+    @property
+    def material_order_status(self):
+        if not self.material_order:
+            return None
+        return self.material_order.status.value
+
+    @property
+    def expected_material_delivery_date(self):
+        if not self.material_order:
+            return None
+        return self.material_order.expected_delivery_date
