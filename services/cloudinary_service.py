@@ -19,3 +19,22 @@ def upload_image(file):
     )
 
     return result["secure_url"]
+
+
+def upload_image_with_metadata(file):
+    """Upload an image and return the persistent URL and Cloudinary ID."""
+    result = cloudinary.uploader.upload(
+        file,
+        folder="thobic/shop-photos",
+        resource_type="image",
+    )
+    return {
+        "url": result["secure_url"],
+        "public_id": result["public_id"],
+    }
+
+
+def delete_image(public_id):
+    """Delete a previously uploaded image by its Cloudinary public ID."""
+    if public_id:
+        return cloudinary.uploader.destroy(public_id, resource_type="image")
