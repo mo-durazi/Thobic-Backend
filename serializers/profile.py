@@ -30,6 +30,7 @@ class ProfileUpdateSchema(BaseModel):
 class ProfileSchema(ProfileBaseSchema):
     id: int
     user_id: int
+    shop_photo_url: Optional[str] = None
 
     class Config:
         from_attributes = True

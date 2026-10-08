@@ -25,10 +25,10 @@ def get_shops(
 
     if name:
         query = query.filter(ProfileModel.display_name.ilike(f"%{name}%"))
-    
+
     if branch:
         query = query.filter(ProfileModel.branch.ilike(f"%{branch}%"))
-        
+
     if status:
         query = query.filter(ProfileModel.status == status)
 
@@ -48,10 +48,10 @@ def get_shops(
             "block_no": profile.block_no if profile else None,
             "building_no": profile.building_no if profile else None,
             "phone_number": profile.phone_number if profile else None,
+            "shop_photo_url": profile.shop_photo_url if profile else None,
         })
 
     return shops_list
-
 
 @router.get("/{shop_id}")
 def get_shop_profile(
@@ -62,7 +62,7 @@ def get_shop_profile(
     Shop Profile page: Show specific shop details and query their stock materials directly via source_id.
     """
     tailor = db.query(UserModel).filter(UserModel.id == shop_id, UserModel.role == UserRole.TAILOR).first()
-    
+
     if not tailor:
         raise HTTPException(status_code=404, detail="Tailoring shop not found.")
 
@@ -98,6 +98,6 @@ def get_shop_profile(
             "building_no": profile.building_no if profile else None,
         },
         "phone_number": profile.phone_number if profile else None,
+        "shop_photo_url": profile.shop_photo_url if profile else None,
         "materials": materials
     }
-    

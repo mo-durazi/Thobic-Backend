@@ -22,6 +22,8 @@ class ProfileModel(BaseModel):
     phone_number = Column(String, nullable=False)
 
     branch = Column(String, nullable=True)
+    shop_photo_url = Column(String, nullable=True)
+    shop_photo_public_id = Column(String, nullable=True)
 
     status = Column(
         SQLEnum(
