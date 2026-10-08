@@ -54,7 +54,9 @@ class ThoubOrderSchema(BaseModel):
     material_amount: float
     price: Optional[float] = None
     measurements_snapshot: Dict[str, Any]
-    style: ThoubStyleSchema
+    # Older orders may contain the pre-standardized style shape. Preserve
+    # those JSON objects in responses; new writes remain strictly validated.
+    style: Dict[str, Any]
     status: OrderStatus
     requested_deadline: Optional[date] = None
     final_deadline: Optional[date] = None
